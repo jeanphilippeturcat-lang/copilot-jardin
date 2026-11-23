@@ -1,0 +1,71 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Testing & Coverage
+/coverage
+
+# Next.js build outputs
+/.next/
+/out/
+/build
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Prisma generated client
+/app/generated/prisma
+
+# User data and uploads (photos, media)
+/public/uploads/*
+!/public/uploads/.gitkeep
+
+# Environment files and credentials (keep .env.example only)
+.env
+.env*.local
+.env.development
+.env.test
+.env.production
+!.env.example
+
+# Local databases, dumps, and docker volume storage
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.dump
+*.sql.gz
+*.bak
+postgres_data/
+redis_data/
+
+# Logs and debug files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# AI assistants, IDE and editor state
+.claude/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Operating System files
+.DS_Store
+Thumbs.db
+*.pem

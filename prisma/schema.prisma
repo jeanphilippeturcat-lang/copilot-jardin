@@ -1,0 +1,84 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Zone {
+  id          String                @id @default(cuid())
+  nom         String
+  type        String
+  surface     Float?
+  exposition  String?
+  plantes     Plante[]
+  intentions  IntentionPlantation[]
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+}
+
+model Plante {
+  id           String        @id @default(cuid())
+  nom          String
+  nomLatine    String?
+  type         String
+  datePlantee  DateTime?
+  zone         Zone          @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  zoneId       String
+  observations Observation[]
+  taches       Tache[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Observation {
+  id         String   @id @default(cuid())
+  plante     Plante   @relation(fields: [planteId], references: [id], onDelete: Cascade)
+  planteId   String
+  note       String
+  photoUrl   String?
+  diagnostic String?
+  createdAt  DateTime @default(now())
+}
+
+model Tache {
+  id           String               @id @default(cuid())
+  titre        String
+  description  String?
+  type         String
+  statut       String               @default("a_faire")
+  dateEcheance DateTime?
+  planteId     String?
+  plante       Plante?              @relation(fields: [planteId], references: [id], onDelete: SetNull)
+  intentionId  String?
+  intention    IntentionPlantation? @relation(fields: [intentionId], references: [id], onDelete: SetNull)
+  source       String               @default("ia")
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+}
+
+model Intervention {
+  id          String   @id @default(cuid())
+  type        String
+  description String
+  date        DateTime @default(now())
+  planteId    String?
+  zoneId      String?
+}
+
+model IntentionPlantation {
+  id              String   @id @default(cuid())
+  nomPlante       String
+  zone            Zone     @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  zoneId          String
+  notes           String?
+  periodeOptimale String?
+  datePlantation  DateTime?
+  raisonnement    String?
+  statut          String   @default("planifiee") // planifiee | realisee | annulee
+  taches          Tache[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
