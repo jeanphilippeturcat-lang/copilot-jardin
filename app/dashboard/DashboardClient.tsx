@@ -4,6 +4,12 @@ import { useState } from "react";
 import { RefreshCw, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { MeteoWidget } from "@/components/dashboard/MeteoWidget";
 import { TachesDuJour } from "@/components/dashboard/TachesDuJour";
 import { AlerteIA } from "@/components/dashboard/AlerteIA";
@@ -26,12 +32,14 @@ interface Alerte {
 interface Props {
   previsions: PrevisionMeteo[];
   tachesInitiales: Tache[];
+  modeleIA: string;
 }
 
-export function DashboardClient({ previsions, tachesInitiales }: Props) {
+export function DashboardClient({ previsions, tachesInitiales, modeleIA }: Props) {
   const [taches, setTaches] = useState<Tache[]>(tachesInitiales);
   const [alertes, setAlertes] = useState<Alerte[]>([]);
   const [conseil, setConseil] = useState<string | null>(null);
+  const [modeleActif, setModeleActif] = useState<string>(modeleIA);
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -40,11 +48,15 @@ export function DashboardClient({ previsions, tachesInitiales }: Props) {
     setErreur(null);
     try {
       const res = await fetch("/api/ia/recommandations", { method: "POST" });
-      if (!res.ok) throw new Error("Erreur lors de la génération des recommandations");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error || "Erreur lors de la génération des recommandations");
+      }
       const data = await res.json();
       setTaches((prev) => [...data.taches, ...prev]);
       setAlertes(data.alertes ?? []);
       setConseil(data.conseil_du_jour ?? null);
+      if (data.modele) setModeleActif(data.modele);
     } catch (e) {
       setErreur(e instanceof Error ? e.message : "Erreur inconnue");
     } finally {
@@ -67,15 +79,24 @@ export function DashboardClient({ previsions, tachesInitiales }: Props) {
             <h1 className="text-2xl font-bold text-[#2d6a4f]">Tableau de bord</h1>
             <p className="mt-0.5 text-sm capitalize text-gray-500">{today}</p>
           </div>
-          <Button
-            onClick={actualiserIA}
-            disabled={chargement}
-            size="sm"
-            className="bg-[#2d6a4f] hover:bg-[#40916c] text-white"
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${chargement ? "animate-spin" : ""}`} />
-            {chargement ? "Génération…" : "Actualiser IA"}
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    onClick={actualiserIA}
+                    disabled={chargement}
+                    size="sm"
+                    className="bg-[#2d6a4f] hover:bg-[#40916c] text-white"
+                  />
+                }
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${chargement ? "animate-spin" : ""}`} />
+                {chargement ? "Génération…" : "Actualiser IA"}
+              </TooltipTrigger>
+              <TooltipContent>Modèle : {modeleActif}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {erreur && (

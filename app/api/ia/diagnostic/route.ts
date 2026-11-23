@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { Type } from "@google/genai";
 import { prisma } from "@/lib/prisma";
-import { anthropic, MODEL } from "@/lib/anthropic";
+import { generateGeminiContent } from "@/lib/gemini";
 import { readFile } from "fs/promises";
 import path from "path";
 
@@ -39,20 +40,18 @@ export async function POST(request: Request) {
     ? `${observation.plante.nom} (${observation.plante.nomLatine})`
     : observation.plante.nom;
 
-  const message = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 2048,
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "image",
-            source: { type: "base64", media_type: mediaType, data: base64 },
+  let result;
+  try {
+    const generated = await generateGeminiContent({
+      contents: [
+        {
+          inlineData: {
+            mimeType: mediaType,
+            data: base64,
           },
-          {
-            type: "text",
-            text: `Tu es un expert en phytopathologie pour le jardinage en Sud de la France (climat méditerranéen).
+        },
+        {
+          text: `Tu es un expert en phytopathologie pour le jardinage en Sud de la France (climat méditerranéen).
 
 Analyse cette photo de la plante : ${nomPlante} (type : ${observation.plante.type}).
 ${observation.note ? `Note de l'utilisateur : "${observation.note}"` : ""}
@@ -64,19 +63,50 @@ Réponds UNIQUEMENT avec du JSON valide, sans balise markdown :
   "traitements": ["traitement ou action 1", "traitement ou action 2"],
   "urgence": "faible|moyenne|haute"
 }`,
+        },
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            diagnostic: { type: Type.STRING },
+            causes_probables: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+            },
+            traitements: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+            },
+            urgence: {
+              type: Type.STRING,
+              enum: ["faible", "moyenne", "haute"],
+            },
           },
-        ],
+          required: ["diagnostic", "causes_probables", "traitements", "urgence"],
+        },
       },
-    ],
-  });
+    });
+    result = generated.response;
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Erreur lors de l'appel à Gemini" },
+      { status: 502 }
+    );
+  }
 
-  const texte = message.content[0].type === "text" ? message.content[0].text : "";
+  const texte = result.text ?? "";
 
   let reponse: ReponseDiagnostic;
   try {
     reponse = JSON.parse(texte) as ReponseDiagnostic;
   } catch {
     return NextResponse.json({ error: "Réponse IA invalide", raw: texte }, { status: 502 });
+  }
+
+  if (!Array.isArray(reponse.causes_probables) || !Array.isArray(reponse.traitements)) {
+    return NextResponse.json({ error: "Réponse IA incomplète", raw: texte }, { status: 502 });
   }
 
   const diagnosticTexte = JSON.stringify(reponse);

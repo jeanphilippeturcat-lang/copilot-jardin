@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { VueMensuelle } from "@/components/calendrier/VueMensuelle";
 import { ProjetsPlantation } from "@/components/calendrier/ProjetsPlantation";
 
+export const dynamic = "force-dynamic";
+
 export default async function PageCalendrier() {
   const [taches, plantes, zones, intentions] = await Promise.all([
     prisma.tache.findMany({

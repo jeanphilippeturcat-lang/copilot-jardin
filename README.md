@@ -11,7 +11,7 @@ Assistant intelligent de jardinage (Progressive Web App) qui s'adapte à votre j
 - **State & Data Fetching** : TanStack Query, Zustand, SWR
 - **Base de données** : PostgreSQL avec [Prisma ORM](https://www.prisma.io/)
 - **Cache & Queue** : Redis (via Docker)
-- **IA** : Anthropic Claude API (recommandations quotidiennes, diagnostic visuel des plantes)
+- **IA** : Google Gemini API (recommandations quotidiennes, planification de plantations et diagnostic visuel des plantes)
 - **Météo** : OpenWeatherMap API
 - **Stockage photos** : Cloudinary / stockage local
 - **Mobile / PWA** : next-pwa (offline support, installation sur écran d'accueil)
@@ -24,7 +24,7 @@ Assistant intelligent de jardinage (Progressive Web App) qui s'adapte à votre j
 
 - Node.js 20+
 - Docker & Docker Compose
-- Un compte / clés API pour Anthropic, OpenWeatherMap et Cloudinary (optionnels en premier test)
+- Un compte / clés API pour Google Gemini, OpenWeatherMap et Cloudinary (optionnels en premier test)
 
 ### 2. Installation des dépendances
 
@@ -42,7 +42,7 @@ cp .env.example .env
 
 Éditez le fichier `.env` :
 - `DATABASE_URL` : URL de connexion PostgreSQL (par défaut pré-configuré pour docker-compose)
-- `ANTHROPIC_API_KEY` : Votre clé API Anthropic
+- `GEMINI_API_KEY` : Votre clé API Google Gemini
 - `OPENWEATHER_API_KEY` : Clé API OpenWeatherMap
 - `CLOUDINARY_*` : Identifiants Cloudinary pour l'hébergement d'images
 
@@ -79,7 +79,7 @@ copilote-jardin/
 │   ├── observations/     # Historique & diagnostics photo
 │   └── api/              # Endpoints API (IA, météo, jardin, photos, tâches)
 ├── components/           # Composants React (UI shadcn, dashboard, jardin...)
-├── lib/                  # Clients Prisma, Anthropic, Cloudinary, météo
+├── lib/                  # Clients Prisma, Gemini, Cloudinary, météo
 ├── hooks/                # Hooks personnalisés
 ├── prisma/               # Schéma Prisma et migrations
 ├── public/               # Fichiers statiques et icônes PWA

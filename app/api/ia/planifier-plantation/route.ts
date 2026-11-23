@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { Type } from "@google/genai";
 import { prisma } from "@/lib/prisma";
-import { anthropic, MODEL } from "@/lib/anthropic";
+import { generateGeminiContent } from "@/lib/gemini";
 
 interface TacheIA {
   titre: string;
@@ -112,13 +113,59 @@ Réponds UNIQUEMENT avec du JSON valide, sans balise markdown :
   ]
 }`;
 
-  const message = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 1500,
-    messages: [{ role: "user", content: prompt }],
-  });
+  let result;
+  try {
+    const generated = await generateGeminiContent({
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            periode_optimale: { type: Type.STRING },
+            date_plantation: { type: Type.STRING },
+            raisonnement: { type: Type.STRING },
+            taches: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  titre: { type: Type.STRING },
+                  type: {
+                    type: Type.STRING,
+                    enum: [
+                      "préparation sol",
+                      "plantation",
+                      "arrosage",
+                      "traitement",
+                      "autre",
+                    ],
+                  },
+                  dateEcheance: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                },
+                required: ["titre", "type", "dateEcheance"],
+              },
+            },
+          },
+          required: [
+            "periode_optimale",
+            "date_plantation",
+            "raisonnement",
+            "taches",
+          ],
+        },
+      },
+    });
+    result = generated.response;
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Erreur lors de l'appel à Gemini" },
+      { status: 502 }
+    );
+  }
 
-  const texte = message.content[0].type === "text" ? message.content[0].text : "";
+  const texte = result.text ?? "";
 
   let reponse: ReponseIA;
   try {
@@ -126,6 +173,13 @@ Réponds UNIQUEMENT avec du JSON valide, sans balise markdown :
   } catch {
     return NextResponse.json(
       { error: "Réponse IA invalide", raw: texte },
+      { status: 502 }
+    );
+  }
+
+  if (!Array.isArray(reponse.taches)) {
+    return NextResponse.json(
+      { error: "Réponse IA incomplète", raw: texte },
       { status: 502 }
     );
   }

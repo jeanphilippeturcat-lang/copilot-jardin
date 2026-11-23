@@ -1,6 +1,9 @@
 import { getMeteo } from "@/lib/meteo";
 import { prisma } from "@/lib/prisma";
+import { GEMINI_MODEL } from "@/lib/gemini";
 import { DashboardClient } from "./DashboardClient";
+
+export const dynamic = "force-dynamic";
 
 export default async function PageDashboard() {
   const finJournee = new Date();
@@ -21,5 +24,11 @@ export default async function PageDashboard() {
     }),
   ]);
 
-  return <DashboardClient previsions={previsions} tachesInitiales={taches} />;
+  return (
+    <DashboardClient
+      previsions={previsions}
+      tachesInitiales={taches}
+      modeleIA={GEMINI_MODEL}
+    />
+  );
 }

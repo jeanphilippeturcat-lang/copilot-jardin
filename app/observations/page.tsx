@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { ObservationsClient } from "./ObservationsClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function PageObservations() {
   const [observations, plantes] = await Promise.all([
     prisma.observation.findMany({

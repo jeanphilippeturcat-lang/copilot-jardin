@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { Type } from "@google/genai";
 import { prisma } from "@/lib/prisma";
-import { anthropic, MODEL, MAX_TOKENS_RECOMMANDATIONS } from "@/lib/anthropic";
 import { getMeteo } from "@/lib/meteo";
+import { generateGeminiContent } from "@/lib/gemini";
 
 interface TacheIA {
   titre: string;
@@ -122,13 +123,74 @@ Réponds UNIQUEMENT avec du JSON valide, sans balise markdown, au format exact :
 Le champ planteId est optionnel (omets-le si la tâche concerne tout le jardin).
 Génère entre 2 et 5 tâches et entre 0 et 3 alertes.`;
 
-  const message = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: MAX_TOKENS_RECOMMANDATIONS,
-    messages: [{ role: "user", content: prompt }],
-  });
+  let result;
+  let modeleUtilise: string;
+  try {
+    const generated = await generateGeminiContent({
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            taches: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  titre: { type: Type.STRING },
+                  type: {
+                    type: Type.STRING,
+                    enum: [
+                      "arrosage",
+                      "taille",
+                      "semis",
+                      "plantation",
+                      "préparation sol",
+                      "traitement",
+                      "récolte",
+                      "autre",
+                    ],
+                  },
+                  urgence: {
+                    type: Type.STRING,
+                    enum: ["haute", "moyenne", "faible"],
+                  },
+                  planteId: { type: Type.STRING },
+                },
+                required: ["titre", "type", "urgence"],
+              },
+            },
+            alertes: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  message: { type: Type.STRING },
+                  niveau: {
+                    type: Type.STRING,
+                    enum: ["info", "warning", "danger"],
+                  },
+                },
+                required: ["message", "niveau"],
+              },
+            },
+            conseil_du_jour: { type: Type.STRING },
+          },
+          required: ["taches", "alertes", "conseil_du_jour"],
+        },
+      },
+    });
+    result = generated.response;
+    modeleUtilise = generated.model;
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Erreur lors de l'appel à Gemini" },
+      { status: 502 }
+    );
+  }
 
-  const texte = message.content[0].type === "text" ? message.content[0].text : "";
+  const texte = result.text ?? "";
 
   let reponse: ReponseIA;
   try {
@@ -136,6 +198,13 @@ Génère entre 2 et 5 tâches et entre 0 et 3 alertes.`;
   } catch {
     return NextResponse.json(
       { error: "Réponse IA invalide", raw: texte },
+      { status: 502 }
+    );
+  }
+
+  if (!Array.isArray(reponse.taches) || !Array.isArray(reponse.alertes)) {
+    return NextResponse.json(
+      { error: "Réponse IA incomplète", raw: texte },
       { status: 502 }
     );
   }
@@ -163,5 +232,6 @@ Génère entre 2 et 5 tâches et entre 0 et 3 alertes.`;
     taches: tachesCrees,
     alertes: reponse.alertes,
     conseil_du_jour: reponse.conseil_du_jour,
+    modele: modeleUtilise,
   });
 }
