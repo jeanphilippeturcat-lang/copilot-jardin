@@ -23,7 +23,7 @@ export default async function PageObservations() {
   }));
 
   return (
-    <div className="min-h-screen bg-[#fefae0] pb-20 md:pb-6">
+    <div className="min-h-screen bg-[#fefae0] pb-20">
       <div className="mx-auto max-w-2xl px-4 py-6 space-y-6">
         <h1 className="text-2xl font-bold text-[#2d6a4f]">Observations</h1>
         <ObservationsClient observations={obsSerialisees} plantes={plantes} />
