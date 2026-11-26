@@ -366,7 +366,7 @@ REDIS_URL=redis://localhost:6379
 
 > Mettre à jour cette section après chaque session de travail.
 
-- **Dernière mise à jour** : 2026-07-06 — Étapes 1 à 7 terminées (setup, jardin, météo, dashboard IA, calendrier, intentions de plantation, observations + photos + diagnostic IA)
+- **Dernière mise à jour** : 2026-11-25 — Ajout de l'onglet **BD** hebdomadaire (bande dessinée verticale noir & blanc générée via Gemini avec personnages animaux récurrents et fiches de référence)
 - **Prochaine tâche** : étape 8 — PWA (manifest + Service Worker + test "Ajouter à l'écran d'accueil")
 
 ---
@@ -460,6 +460,15 @@ npm run dev            # applique les migrations puis lance l'app
 - `components/observations/FormulaireObservation.tsx` — formulaire avec aperçu photo
 - `components/observations/CarteObservation.tsx` — carte avec photo, bouton diagnostic IA, résultat expandable
 - `components/jardin/CarteZone.tsx` — indicateur "Obs. il y a X j" sur chaque plante (orange si > 30j)
+
+**BD hebdomadaire du jardin (Noir & Blanc — The Garden Chronicle)**
+- `prisma/schema.prisma` — modèle `BandeDessinee` (clé ISO `semaineCle`, `actionsJson`, `promptImage`, `imageUrl` optionnelle, `batchJobName`, `batchStatut`)
+- `lib/semaine.ts` — calcul des semaines ISO (lundi → dimanche)
+- `lib/bd-personnages.ts` — casting récurrent d'animaux méditerranéens du Sud de la France par opération (Marcel le sanglier de la garrigue pour plantation/semis/sol, Mireille le flamant de Camargue pour l'arrosage, Léon le lézard de Provence pour la taille, Margot la mante religieuse pour les soins/traitements, César la cigale pour la récolte, Bastien la tortue d'Hermann pour l'entretien)
+- `lib/bd-prompt.ts` — gabarit « The Garden Chronicle » (une de journal vintage 16:9 N&B ligne claire) + données complètes du jardin incluses dans le copier-coller
+- `lib/gemini.ts` + `lib/bd-generateur.ts` — modèle image par défaut `gemini-3.1-flash-lite-image` (Nano Banana 2 Lite, 1K 16:9), support Gemini Batch API (`client.batches.create()` / `get()`, -50%), requête unique stateless avec au maximum 1 image de référence JPEG compressée via `sharp` (`reference-layout.jpg`, ≤ 1024 px, q=72). Génération automatique d'image hebdomadaire désactivée par défaut (`mode="prompt"`).
+- `app/api/bd/route.ts`, `app/api/bd/generer/route.ts`, `app/api/bd/batch/verifier/route.ts`, `app/api/bd/reference/route.ts`, `app/api/bd/[id]/route.ts`, `app/api/bd/[id]/image/route.ts`, `app/api/bd/image/[...chemin]/route.ts`
+- `app/bd/page.tsx` + `app/bd/BdClient.tsx` + `components/bd/PromptRecommande.tsx` + `components/bd/EquipePersonnages.tsx` — onglet `BD` avec prompt+données copiable/éditable, import manuel, Batch API (-50%), référence JPEG unique compressée, visionneuse plein écran et archives hebdomadaires
 
 ### Blocages en cours
 Aucun — toutes les étapes MVP 1 à 7 sont terminées. Reste l'étape 8 (PWA).

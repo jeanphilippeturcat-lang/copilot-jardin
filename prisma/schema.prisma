@@ -82,3 +82,21 @@ model IntentionPlantation {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+model BandeDessinee {
+  id           String   @id @default(cuid())
+  semaineCle   String   @unique
+  dateDebut    DateTime
+  dateFin      DateTime
+  titre        String
+  resume       String?
+  imageUrl     String?
+  promptImage  String?
+  actionsJson  String
+  modeleTexte  String?
+  modeleImage  String?
+  batchJobName String?
+  batchStatut  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
