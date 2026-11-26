@@ -2,7 +2,16 @@ export type TypeZone = "potager" | "verger" | "massif" | "serre" | "pelouse";
 export type TypePlante = "légume" | "arbre" | "arbuste" | "fleur" | "aromatique";
 export type Exposition = "nord" | "sud" | "est" | "ouest" | "mi-ombre";
 export type StatutTache = "a_faire" | "faite" | "ignoree";
-export type TypeTache = "arrosage" | "taille" | "semis" | "traitement" | "récolte" | "autre";
+export type TypeTache =
+  | "arrosage"
+  | "taille"
+  | "semis"
+  | "plantation"
+  | "préparation sol"
+  | "traitement"
+  | "récolte"
+  | "désherbage"
+  | "autre";
 
 export interface Zone {
   id: string;
@@ -47,6 +56,8 @@ export type OperationBD =
   | "taille"
   | "traitement"
   | "recolte"
+  | "desherbage"
+  | "meteo"
   | "entretien";
 
 export interface PersonnageBD {

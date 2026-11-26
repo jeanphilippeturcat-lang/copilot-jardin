@@ -50,6 +50,8 @@ export async function POST(
     data: {
       imageUrl: nouvelleUrl,
       modeleImage: "import-manuel",
+      batchJobName: null,
+      batchStatut: null,
     },
   });
 

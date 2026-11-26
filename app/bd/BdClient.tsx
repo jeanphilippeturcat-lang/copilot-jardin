@@ -5,6 +5,8 @@ import {
   BookmarkCheck,
   BookOpen,
   Calendar,
+  Check,
+  CheckCircle2,
   Clock,
   Download,
   ImagePlus,
@@ -57,6 +59,8 @@ const LIBELLE_OPERATION: Record<OperationBD, string> = {
   taille: "Taille",
   traitement: "Soin & traitement",
   recolte: "Récolte",
+  desherbage: "Désherbage",
+  meteo: "Prévisions météo",
   entretien: "Entretien",
 };
 
@@ -87,6 +91,21 @@ function formaterPlageSemaine(
 
 function formaterKo(octets: number): string {
   return `${Math.max(1, Math.round(octets / 1024))} Ko`;
+}
+
+function formaterDateHeure(isoString: string): string {
+  try {
+    const d = new Date(isoString);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("fr-FR", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
 }
 
 export function BdClient({
@@ -200,8 +219,10 @@ export function BdClient({
       setBds(data.bandesDessinees);
       if (data.erreurs.length > 0) {
         setInfoImage(data.erreurs.join(" · "));
-      } else if (data.misesAJour === 0) {
-        setInfoImage("Le job Batch est toujours en cours de traitement côté Google.");
+      } else if (data.misesAJour > 0) {
+        setInfoImage("✨ Nouvelle image reçue et mise à jour avec succès via le Batch Google !");
+      } else {
+        setInfoImage("Le job Batch est toujours en cours de traitement côté Google. Réessayez dans un instant.");
       }
     } catch (e) {
       setErreur(e instanceof Error ? e.message : "Erreur inconnue");
@@ -310,6 +331,44 @@ export function BdClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bdSemaineCourante]);
 
+  // Vérification automatique périodique si un job Batch est en attente
+  useEffect(() => {
+    const aUnBatchEnAttente = bds.some(
+      (b) =>
+        Boolean(b.batchJobName) &&
+        Boolean(b.batchStatut) &&
+        ETATS_BATCH_EN_COURS.has(b.batchStatut ?? "")
+    );
+    if (!aUnBatchEnAttente) return;
+
+    let actif = true;
+    const intervalId = setInterval(async () => {
+      try {
+        const res = await fetch("/api/bd/batch/verifier", { method: "POST" });
+        if (!res.ok || !actif) return;
+        const data = (await res.json()) as {
+          misesAJour: number;
+          erreurs: string[];
+          bandesDessinees: BandeDessineeDTO[];
+        };
+        if (!actif) return;
+        if (data.misesAJour > 0) {
+          setBds(data.bandesDessinees);
+          setInfoImage("✨ Nouvelle image reçue et mise à jour avec succès via le Batch Google !");
+        } else if (data.bandesDessinees.length > 0) {
+          setBds(data.bandesDessinees);
+        }
+      } catch {
+        // Silencieux en tâche de fond
+      }
+    }, 6000);
+
+    return () => {
+      actif = false;
+      clearInterval(intervalId);
+    };
+  }, [bds]);
+
   const estSemaineActuelle = bdAffichee?.semaineCle === semaineCourante.semaineCle;
   const infoModeles = `${bdAffichee?.modeleTexte ?? modeleTexteDefaut} + ${
     bdAffichee?.modeleImage ?? modeleImageDefaut
@@ -383,8 +442,29 @@ export function BdClient({
 
         {/* Info génération / Batch */}
         {infoImage && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
-            {infoImage}
+          <div
+            className={`flex items-center justify-between gap-2 rounded-lg border px-4 py-3 text-xs ${
+              infoImage.includes("✨") || infoImage.includes("succès")
+                ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                : "border-amber-200 bg-amber-50 text-amber-900"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {infoImage.includes("✨") || infoImage.includes("succès") ? (
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+              ) : (
+                <Clock className="h-4 w-4 shrink-0 text-amber-600" />
+              )}
+              <span>{infoImage}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setInfoImage(null)}
+              className="text-xs text-gray-400 hover:text-gray-600"
+              aria-label="Fermer la notification"
+            >
+              ×
+            </button>
           </div>
         )}
 
@@ -427,12 +507,24 @@ export function BdClient({
                         Archive
                       </Badge>
                     )}
-                    {batchEnAttente && (
-                      <Badge className="bg-amber-100 text-amber-800 text-[11px]">
-                        <Clock className="mr-1 h-3 w-3" />
+                    {bdAffichee.imageUrl ? (
+                      batchEnAttente ? (
+                        <Badge className="border-amber-300 bg-amber-100 text-amber-900 text-[11px] font-medium animate-pulse">
+                          <Clock className="mr-1 h-3 w-3 text-amber-700" />
+                          Régénération Batch en cours
+                        </Badge>
+                      ) : (
+                        <Badge className="border-emerald-300 bg-emerald-50 text-emerald-800 text-[11px] font-medium">
+                          <CheckCircle2 className="mr-1 h-3 w-3 text-emerald-600" />
+                          Image à jour
+                        </Badge>
+                      )
+                    ) : batchEnAttente ? (
+                      <Badge className="border-amber-300 bg-amber-100 text-amber-900 text-[11px] font-medium animate-pulse">
+                        <Clock className="mr-1 h-3 w-3 text-amber-700" />
                         Batch en cours
                       </Badge>
-                    )}
+                    ) : null}
                   </div>
                   <p className="text-xs text-gray-500">
                     {formaterPlageSemaine(
@@ -509,10 +601,9 @@ export function BdClient({
               {batchEnAttente && (
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200 bg-amber-50/90 px-4 py-2.5 text-xs text-amber-900">
                   <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 shrink-0" />
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-amber-600" />
                     <span>
-                      Génération Batch en file d&apos;attente ({bdAffichee.batchStatut}) —
-                      tarif -50% actif.
+                      Génération Batch en cours ({bdAffichee.batchStatut?.replace("JOB_STATE_", "") || "En attente"}) — actualisation automatique active dès réception (-50%).
                     </span>
                   </div>
                   <Button
@@ -535,19 +626,85 @@ export function BdClient({
 
               {/* Image de la une 16:9 OU zone d'attente + actions manuelles */}
               {bdAffichee.imageUrl ? (
-                <button
-                  type="button"
-                  onClick={() => setZoomOuvert(true)}
-                  className="block w-full bg-white p-2 sm:p-3 focus:outline-none"
-                  aria-label="Afficher la BD en plein écran"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={bdAffichee.imageUrl}
-                    alt={`The Garden Chronicle : ${bdAffichee.titre}`}
-                    className="mx-auto w-full rounded-lg border border-gray-200 bg-white object-contain"
-                  />
-                </button>
+                <div className="relative group bg-white p-2 sm:p-3">
+                  <button
+                    type="button"
+                    onClick={() => setZoomOuvert(true)}
+                    className="block w-full focus:outline-none"
+                    aria-label="Afficher la BD en plein écran"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={bdAffichee.imageUrl}
+                      alt={`The Garden Chronicle : ${bdAffichee.titre}`}
+                      className={`mx-auto w-full rounded-lg border bg-white object-contain transition-all ${
+                        batchEnAttente
+                          ? "border-amber-300 opacity-80 brightness-95"
+                          : "border-gray-200"
+                      }`}
+                    />
+                  </button>
+
+                  {/* Indice visuel direct sur l'image */}
+                  {batchEnAttente ? (
+                    <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2 rounded-lg bg-amber-950/90 px-3 py-2 text-xs text-amber-100 backdrop-blur shadow-md border border-amber-500/40">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Loader2 className="h-4 w-4 animate-spin text-amber-400 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-semibold text-white truncate">
+                            Version précédente affichée
+                          </p>
+                          <p className="text-[11px] text-amber-200/90 truncate">
+                            Nouvelle image en attente de réception (Batch -50%) · L&apos;image sera actualisée automatiquement
+                          </p>
+                        </div>
+                      </div>
+                      <Badge className="bg-amber-500/25 text-amber-200 border-amber-400/30 text-[10px] shrink-0">
+                        {bdAffichee.batchStatut?.replace("JOB_STATE_", "") || "En attente"}
+                      </Badge>
+                    </div>
+                  ) : (
+                    <div className="absolute top-4 left-4 flex items-center gap-1.5 rounded-full bg-emerald-950/80 px-2.5 py-1 text-[11px] font-medium text-emerald-200 backdrop-blur shadow-sm border border-emerald-500/40">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                      <span>Image à jour</span>
+                      {bdAffichee.updatedAt && (
+                        <span className="hidden sm:inline text-emerald-300/80 text-[10px]">
+                          · {formaterDateHeure(bdAffichee.updatedAt)}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : batchEnAttente ? (
+                <div className="flex flex-col items-center justify-center gap-3 bg-[#faf8f0] px-4 py-10 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-amber-300 bg-amber-50 text-amber-700">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                  <div className="max-w-md space-y-1">
+                    <p className="text-sm font-semibold text-amber-950">
+                      Génération Batch en cours…
+                    </p>
+                    <p className="text-xs text-amber-800/80">
+                      Le job Batch (-50%) est en cours de traitement chez Google. L&apos;image apparaîtra
+                      ici automatiquement dès réception (vérification toutes les 6 s).
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={verifierBatch}
+                    disabled={verifBatchEnCours}
+                    className="border-amber-300 bg-white text-xs text-amber-900 hover:bg-amber-100"
+                  >
+                    {verifBatchEnCours ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    Vérifier maintenant
+                  </Button>
+                </div>
               ) : (
                 <div className="flex flex-col items-center justify-center gap-3 bg-[#faf8f0] px-4 py-8 text-center">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-700">
@@ -584,7 +741,7 @@ export function BdClient({
                           size="sm"
                           variant="outline"
                           onClick={() => lancerGeneration(false, "batch")}
-                          disabled={generationEnCours}
+                          disabled={generationEnCours || batchEnAttente}
                           className="border-[#2d6a4f]/40 text-[#2d6a4f] hover:bg-[#2d6a4f]/5"
                         >
                           <Layers className="mr-1.5 h-4 w-4" />
@@ -606,36 +763,53 @@ export function BdClient({
                 </div>
               )}
 
-              {/* Actions API compactes quand une image est déjà affichée sur la semaine courante */}
-              {bdAffichee.imageUrl && estSemaineActuelle && (
+              {/* Actions et statut compacts sous l'image */}
+              {bdAffichee.imageUrl && (
                 <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 bg-white px-4 py-2.5">
-                  <span className="text-[11px] text-gray-500">
-                    Modèle image : <strong>{modeleImageDefaut}</strong> · 1K 16:9 stateless
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => lancerGeneration(false, "batch")}
-                      disabled={generationEnCours}
-                      className="h-7 text-xs border-[#2d6a4f]/40 text-[#2d6a4f]"
-                    >
-                      <Layers className="mr-1 h-3.5 w-3.5" />
-                      Batch (-50%)
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => lancerGeneration(false, "image")}
-                      disabled={generationEnCours}
-                      className="h-7 text-xs"
-                    >
-                      <Wand2 className="mr-1 h-3.5 w-3.5" />
-                      Direct
-                    </Button>
+                  <div className="flex items-center gap-1.5 text-xs">
+                    {batchEnAttente ? (
+                      <span className="flex items-center gap-1.5 font-medium text-amber-700">
+                        <Clock className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                        Régénération Batch en cours · Nouvelle image en attente
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 font-medium text-emerald-700">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        Image à jour {bdAffichee.updatedAt ? `· Reçue le ${formaterDateHeure(bdAffichee.updatedAt)}` : ""}
+                        {bdAffichee.modeleImage && (
+                          <span className="hidden sm:inline font-normal text-gray-500">
+                            ({bdAffichee.modeleImage})
+                          </span>
+                        )}
+                      </span>
+                    )}
                   </div>
+                  {estSemaineActuelle && (
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => lancerGeneration(false, "batch")}
+                        disabled={generationEnCours || batchEnAttente}
+                        className="h-7 text-xs border-[#2d6a4f]/40 text-[#2d6a4f]"
+                      >
+                        <Layers className="mr-1 h-3.5 w-3.5" />
+                        Batch (-50%)
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => lancerGeneration(false, "image")}
+                        disabled={generationEnCours}
+                        className="h-7 text-xs"
+                      >
+                        <Wand2 className="mr-1 h-3.5 w-3.5" />
+                        Direct
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -855,6 +1029,19 @@ export function BdClient({
                             Actuelle
                           </span>
                         )}
+                        {item.imageUrl && (
+                          Boolean(item.batchJobName) &&
+                          Boolean(item.batchStatut) &&
+                          ETATS_BATCH_EN_COURS.has(item.batchStatut ?? "") ? (
+                            <span className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 rounded bg-amber-600/90 px-1.5 py-0.5 text-[9px] font-medium text-white shadow-xs">
+                              <Clock className="h-2.5 w-2.5" /> Batch
+                            </span>
+                          ) : (
+                            <span className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 rounded bg-emerald-700/90 px-1.5 py-0.5 text-[9px] font-medium text-white shadow-xs">
+                              <Check className="h-2.5 w-2.5" /> À jour
+                            </span>
+                          )
+                        )}
                       </div>
                       <div className="p-2 space-y-0.5">
                         <p className="truncate text-xs font-semibold text-gray-800">
@@ -884,9 +1071,24 @@ export function BdClient({
       <Dialog open={zoomOuvert} onOpenChange={setZoomOuvert}>
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-5xl bg-white">
           <DialogHeader>
-            <DialogTitle className="pr-8 text-gray-900">
-              {bdAffichee?.titre}
-            </DialogTitle>
+            <div className="flex flex-wrap items-center justify-between gap-2 pr-8">
+              <DialogTitle className="text-gray-900">
+                {bdAffichee?.titre}
+              </DialogTitle>
+              {bdAffichee?.imageUrl && (
+                batchEnAttente ? (
+                  <Badge className="border-amber-300 bg-amber-100 text-amber-900 text-xs">
+                    <Clock className="mr-1 h-3 w-3" />
+                    Version précédente (Régénération en cours)
+                  </Badge>
+                ) : (
+                  <Badge className="border-emerald-300 bg-emerald-50 text-emerald-800 text-xs">
+                    <CheckCircle2 className="mr-1 h-3 w-3 text-emerald-600" />
+                    Image à jour
+                  </Badge>
+                )
+              )}
+            </div>
           </DialogHeader>
           {bdAffichee?.imageUrl && (
             <div className="flex justify-center">
@@ -894,7 +1096,9 @@ export function BdClient({
               <img
                 src={bdAffichee.imageUrl}
                 alt={`The Garden Chronicle : ${bdAffichee.titre}`}
-                className="w-full rounded-lg border border-gray-200 bg-white object-contain"
+                className={`w-full rounded-lg border bg-white object-contain ${
+                  batchEnAttente ? "border-amber-300 opacity-90" : "border-gray-200"
+                }`}
               />
             </div>
           )}

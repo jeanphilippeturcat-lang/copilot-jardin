@@ -322,7 +322,7 @@ RIGHT ACTION COLUMN (42% width):
    - [ ] ${nettoyerGuillemets(d.task2)} (icon: ${nettoyerGuillemets(d.task2Icon)})
    - [ ] ${nettoyerGuillemets(d.task3)} (icon: ${nettoyerGuillemets(d.task3Icon)})
 2. Middle side-by-side mini-cards:
-   - Left mini-card ("MÉTÉO"): ink icon of ${nettoyerGuillemets(d.weatherVisual)} + "${nettoyerGuillemets(d.weatherCondition)}\\n${nettoyerGuillemets(d.tempMin)} / ${nettoyerGuillemets(d.tempMax)}"
+   - Left mini-card ("MÉTÉO"): crisp ink vignette of ${nettoyerGuillemets(d.weatherVisual)} + "${nettoyerGuillemets(d.weatherCondition)}\\n${nettoyerGuillemets(d.tempMin)} / ${nettoyerGuillemets(d.tempMax)}"
    - Right mini-card ("PLANTE"): ink drawing of ${nettoyerGuillemets(d.featuredPlantVisual)} with mini bubble "${nettoyerGuillemets(d.featuredPlantSpeech)}"
 3. Bottom framed panel ("VIGILANCE AU JARDIN"): crisp comic scene of ${nettoyerGuillemets(d.pestPanelVisual)} with speech bubbles "${nettoyerGuillemets(d.pestBubble1)}" and "${nettoyerGuillemets(d.pestBubble2)}".`;
 }

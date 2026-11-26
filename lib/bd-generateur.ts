@@ -252,7 +252,10 @@ async function genererChroniqueSemaine(
               })
             : "";
           const plante = t.plante ? ` [${t.plante.nom}]` : "";
-          const op = normaliserOperationBD(t.type);
+          const op = normaliserOperationBD(
+            t.type,
+            `${t.titre} ${t.description ?? ""}`
+          );
           return `- ${jour} : ${t.titre}${plante} (type: ${t.type} → opération: ${op})${t.description ? ` — ${t.description}` : ""}`;
         })
         .join("\n")
@@ -262,7 +265,10 @@ async function genererChroniqueSemaine(
     ? tachesEnRetard
         .map((t) => {
           const plante = t.plante ? ` [${t.plante.nom}]` : "";
-          const op = normaliserOperationBD(t.type);
+          const op = normaliserOperationBD(
+            t.type,
+            `${t.titre} ${t.description ?? ""}`
+          );
           return `- ${t.titre}${plante} (opération: ${op})`;
         })
         .join("\n")
@@ -341,12 +347,12 @@ CONSIGNES :
    - "leadParagraph" (FR, 1 à 2 courtes phrases chaleureuses résumant la semaine au jardin)
    - "gardenReportText" (FR, 2 courtes phrases maximum sur l'état du jardin cette semaine)
    - "weatherCondition" (FR court, ex: "Ensoleillé", "Pluvieux", "Mistral frais", "Doux et voilé"), "tempMax" (ex: "18°C"), "tempMin" (ex: "8°C") — basés sur la météo réelle ci-dessus
-   - "weatherVisual" (EN, petite illustration BD au trait noir fidèle à la météo réelle de la semaine : ex. cheerful smiling vintage sun with crisp triangular rays si ensoleillé, playful raincloud with raindrops and tiny umbrella si pluvieux, swirling Mistral wind lines blowing olive leaves si venteux, crisp snowflake/frost crystals with a scarfed bird si froid, fluffy sun peeking behind clean ink clouds si voilé)
+   - "weatherVisual" (EN, petite vignette BD au trait noir mettant TOUJOURS en scène Gizelle la tourterelle — dans sa description visuelle EN ci-dessus — en train d'annoncer la météo réelle de la semaine : ex. Gizelle pointing cheerfully with a wing toward a smiling vintage sun with crisp triangular rays si ensoleillé, Gizelle holding a tiny folding umbrella under a playful raincloud with raindrops si pluvieux, Gizelle clutching her Provençal scarf beside her spinning weathervane in swirling Mistral wind lines si venteux, Gizelle checking her barometer gauge with crisp frost crystals si froid, Gizelle perched near her weathervane under a sun peeking behind clean ink clouds si voilé)
    - "featuredPlantVisual" (EN, illustration BD d'une plante réelle du jardin ou de saison en suivant ce style de présentation : "${directionArtistique.presentationPlanteEn}")
    - "featuredPlantSpeech" (FR, bulle joyeuse très courte, max 6 mots)
    - "pestPanelVisual" (EN, petite scène BD de vigilance saisonnière mettant en scène Margot la mante religieuse — varie l'action selon la saison et la météo : inspection d'un bourgeon, observation du vent/gel/humidité du sol, vérification d'une tige ou d'un voile d'hivernage, ou accueil de coccinelles)
    - "pestBubble1" et "pestBubble2" (FR, 2 très courtes bulles joyeuses, max 5 mots chacune)
-   - "starOperation" : l'opération principale de la semaine (${OPERATIONS_BD.join(", ")}) — elle désigne le personnage vedette de la semaine !
+   - "starOperation" : l'opération principale de la semaine (${OPERATIONS_BD.join(", ")}) — elle désigne le personnage vedette de la semaine (utilise "desherbage" → Ragoût le lapin pour tout désherbage / arrachage de mauvaises herbes, et "meteo" → Gizelle la tourterelle si un événement météo majeur domine la semaine) !
    - "mainComicVisual" (EN, grande scène BD joyeuse utilisant le cadrage "${directionArtistique.angleCameraEn}", située "${directionArtistique.decorJardinEn}", mettant en scène le personnage animal correspondant à starOperation dans son exacte description visuelle EN ci-dessus en train de réaliser l'action clé principale ; tu peux éventuellement inclure un second animal de l'équipe en arrière-plan pour dynamiser la scène)
    - "mainBubble1" et "mainBubble2" (FR, 2 courtes bulles joyeuses, max 7 mots chacune)
    - "characterQuote" (FR, citation joyeuse et motivante du personnage vedette, max 10 mots)

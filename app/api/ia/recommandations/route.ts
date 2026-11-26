@@ -116,7 +116,7 @@ N'inclus pas de tâches déjà en cours.
 
 Réponds UNIQUEMENT avec du JSON valide, sans balise markdown, au format exact :
 {
-  "taches": [{ "titre": "...", "type": "arrosage|taille|semis|plantation|préparation sol|traitement|récolte|autre", "urgence": "haute|moyenne|faible", "planteId": "..." }],
+  "taches": [{ "titre": "...", "type": "arrosage|taille|semis|plantation|préparation sol|traitement|récolte|désherbage|autre", "urgence": "haute|moyenne|faible", "planteId": "..." }],
   "alertes": [{ "message": "...", "niveau": "info|warning|danger" }],
   "conseil_du_jour": "..."
 }
@@ -149,6 +149,7 @@ Génère entre 2 et 5 tâches et entre 0 et 3 alertes.`;
                       "préparation sol",
                       "traitement",
                       "récolte",
+                      "désherbage",
                       "autre",
                     ],
                   },

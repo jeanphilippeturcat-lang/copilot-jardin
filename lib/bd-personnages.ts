@@ -77,6 +77,34 @@ export const PERSONNAGES_BD: readonly PersonnageBD[] = [
       "a woven Provençal wicker harvest basket carried over one arm",
   },
   {
+    id: "ragout-lapin",
+    operation: "desherbage",
+    nom: "Ragoût le lapin",
+    animal: "Lapin de garenne",
+    roleLabel: "Désherbage",
+    operationsCouvertes: ["désherbage"],
+    descriptionFr:
+      "Lapin de garenne vif et malicieux de la garrigue, champion du désherbage qui débarrasse les massifs et le potager des mauvaises herbes.",
+    descriptionVisuelleEn:
+      "Ragoût, a lively mischievous Provençal wild rabbit (lapin de garenne) standing upright on two legs with tall expressive alert ears, a twitchy nose, bushy little cotton tail, and a cheeky grin, wearing rolled-up canvas gardener overalls and a knotted bandana around his neck",
+    accessoireSignatureEn:
+      "a sturdy hand weeding fork (sarcloir) and a woven trug basket overflowing with freshly pulled garden weeds and dandelion tufts",
+  },
+  {
+    id: "gizelle-tourterelle",
+    operation: "meteo",
+    nom: "Gizelle la tourterelle",
+    animal: "Tourterelle de Provence",
+    roleLabel: "Prévisions météo",
+    operationsCouvertes: ["météo", "prévisions"],
+    descriptionFr:
+      "Tourterelle provençale élégante à petite écharpe et girouette de jardin, toujours perchée pour annoncer les prévisions météo de la semaine.",
+    descriptionVisuelleEn:
+      "Gizelle, a graceful cheerful Provençal collared dove (tourterelle) standing upright with a neat dark ink neck-ring stripe, expressive bright eyes, soft feather tufts, and a warm welcoming smile, wearing a tiny patterned Provençal neck scarf like a friendly weather forecaster",
+    accessoireSignatureEn:
+      "a miniature vintage wrought-iron weathervane (girouette) and a little barometer gauge or tiny folding umbrella",
+  },
+  {
     id: "bastien-tortue",
     operation: "entretien",
     nom: "Bastien la tortue d'Hermann",
@@ -98,7 +126,9 @@ export const PERSONNAGES_PAR_OPERATION: Record<OperationBD, PersonnageBD> = {
   taille: PERSONNAGES_BD[2],
   traitement: PERSONNAGES_BD[3],
   recolte: PERSONNAGES_BD[4],
-  entretien: PERSONNAGES_BD[5],
+  desherbage: PERSONNAGES_BD[5],
+  meteo: PERSONNAGES_BD[6],
+  entretien: PERSONNAGES_BD[7],
 };
 
 export const OPERATIONS_BD: readonly OperationBD[] = [
@@ -107,47 +137,103 @@ export const OPERATIONS_BD: readonly OperationBD[] = [
   "taille",
   "traitement",
   "recolte",
+  "desherbage",
+  "meteo",
   "entretien",
 ];
 
+function detecterOperationDepuisTexte(texteNormalise: string): OperationBD | null {
+  if (
+    texteNormalise.includes("desherb") ||
+    texteNormalise.includes("mauvais") ||
+    texteNormalise.includes("adventic") ||
+    texteNormalise.includes("sarcl") ||
+    texteNormalise.includes("binag") ||
+    texteNormalise.includes("biner") ||
+    texteNormalise.includes("chiendent") ||
+    texteNormalise.includes("pissenlit") ||
+    texteNormalise.includes("weed")
+  ) {
+    return "desherbage";
+  }
+  if (
+    texteNormalise.includes("meteo") ||
+    texteNormalise.includes("prevision") ||
+    texteNormalise.includes("bulletin") ||
+    texteNormalise.includes("climat")
+  ) {
+    return "meteo";
+  }
+  if (
+    texteNormalise.includes("plant") ||
+    texteNormalise.includes("semi") ||
+    texteNormalise.includes("sol") ||
+    texteNormalise.includes("terre") ||
+    texteNormalise.includes("repiqu")
+  ) {
+    return "plantation";
+  }
+  if (
+    texteNormalise.includes("arros") ||
+    texteNormalise.includes("eau") ||
+    texteNormalise.includes("irrig")
+  ) {
+    return "arrosage";
+  }
+  if (
+    texteNormalise.includes("taill") ||
+    texteNormalise.includes("elag") ||
+    texteNormalise.includes("pinc")
+  ) {
+    return "taille";
+  }
+  if (
+    texteNormalise.includes("trait") ||
+    texteNormalise.includes("soin") ||
+    texteNormalise.includes("malad") ||
+    texteNormalise.includes("parasit") ||
+    texteNormalise.includes("bouillie")
+  ) {
+    return "traitement";
+  }
+  if (texteNormalise.includes("recolt") || texteNormalise.includes("cueill")) {
+    return "recolte";
+  }
+  return null;
+}
+
 /**
- * Convertit un type de tâche Prisma (arrosage, semis, préparation sol, etc.)
- * en opération canonique de BD.
+ * Convertit un type de tâche Prisma (arrosage, semis, désherbage, etc.)
+ * en opération canonique de BD. Si le type est générique ("autre"), le texte
+ * complémentaire (titre/description) est également inspecté.
  */
-export function normaliserOperationBD(typeTache: string): OperationBD {
+export function normaliserOperationBD(
+  typeTache: string,
+  texteContexte?: string
+): OperationBD {
   const normalise = typeTache
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
 
-  if (
-    normalise.includes("plant") ||
-    normalise.includes("semi") ||
-    normalise.includes("sol") ||
-    normalise.includes("terre") ||
-    normalise.includes("repiqu")
-  ) {
-    return "plantation";
+  const depuisType = detecterOperationDepuisTexte(normalise);
+  if (depuisType) {
+    return depuisType;
   }
-  if (normalise.includes("arros") || normalise.includes("eau") || normalise.includes("irrig")) {
-    return "arrosage";
+
+  if (texteContexte) {
+    const contexteNormalise = texteContexte
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+    const depuisContexte = detecterOperationDepuisTexte(contexteNormalise);
+    if (depuisContexte) {
+      return depuisContexte;
+    }
   }
-  if (normalise.includes("taill") || normalise.includes("elag") || normalise.includes("pinc")) {
-    return "taille";
-  }
-  if (
-    normalise.includes("trait") ||
-    normalise.includes("soin") ||
-    normalise.includes("malad") ||
-    normalise.includes("parasit") ||
-    normalise.includes("bouillie")
-  ) {
-    return "traitement";
-  }
-  if (normalise.includes("recolt") || normalise.includes("cueill")) {
-    return "recolte";
-  }
+
   return "entretien";
 }
 

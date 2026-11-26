@@ -56,6 +56,7 @@ const TYPES_TACHE = [
   { value: "taille", label: "Taille" },
   { value: "traitement", label: "Traitement" },
   { value: "récolte", label: "Récolte" },
+  { value: "désherbage", label: "Désherbage" },
   { value: "autre", label: "Autre" },
 ];
 
@@ -67,6 +68,7 @@ const couleurType: Record<string, string> = {
   "préparation sol": "bg-amber-700",
   traitement: "bg-red-400",
   récolte: "bg-yellow-400",
+  désherbage: "bg-lime-500",
   autre: "bg-gray-400",
 };
 
@@ -78,6 +80,7 @@ const couleurBadge: Record<string, string> = {
   "préparation sol": "bg-amber-100 text-amber-800",
   traitement: "bg-red-100 text-red-700",
   récolte: "bg-yellow-100 text-yellow-700",
+  désherbage: "bg-lime-100 text-lime-800",
   autre: "bg-gray-100 text-gray-700",
 };
 
